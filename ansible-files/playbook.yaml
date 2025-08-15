@@ -1,0 +1,214 @@
+---
+- name: Setup Jenkins Master
+  hosts: jenkins_master
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    # Docker tool setup
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repo
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Install Docker and Docker Compose
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    # Jenkins tool setup
+    - name: Add Jenkins repo key
+      apt_key:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        state: present
+
+    - name: Add Jenkins repo
+      apt_repository:
+        repo: deb https://pkg.jenkins.io/debian-stable binary/
+        state: present
+
+    - name: Install Java and Jenkins
+      apt:
+        name:
+          - openjdk-17-jdk
+          - jenkins
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Jenkins service
+      systemd:
+        name: jenkins
+        state: started
+        enabled: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Add jenkins user to docker group
+      user:
+        name: jenkins
+        groups: docker
+        append: yes
+
+    - name: Reset ssh connection to allow user changes to affect 'current login user'
+      meta: reset_connection
+
+- name: Setup Jenkins Agent
+  hosts: jenkins_agent
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install prerequisites
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+
+    # Docker tools setup
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repo
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+        state: present
+
+    - name: Install Docker and Docker Compose
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install Java for Jenkins agent
+      apt:
+        name: openjdk-17-jdk
+        state: present
+        update_cache: yes
+
+    - name: Create jenkins user on agent
+      user:
+        name: jenkins
+        shell: /bin/bash
+        home: /home/jenkins
+        create_home: yes
+
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: yes
+
+    - name: Add jenkins user to docker group
+      user:
+        name: jenkins
+        groups: docker
+        append: yes
+
+ # Kubernetes tools setup
+    - name: Set kubectl version
+      set_fact:
+        kubectl_version: "v1.29.0"
+
+    - name: Create kubectl versioned directory
+      file:
+        path: /opt/kubectl-{{ kubectl_version }}
+        state: directory
+
+    - name: Download kubectl release
+      get_url:
+        url: https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl
+        dest: /opt/kubectl-{{ kubectl_version }}/kubectl
+        mode: '0755'
+        timeout: 60
+      retries: 3
+      delay: 10
+
+    - name: Download the kubectl checksum
+      get_url:
+        url: https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl.sha256
+        dest: /opt/kubectl-{{ kubectl_version }}/kubectl.sha256
+        timeout: 60
+      retries: 3
+      delay: 10
+
+    - name: Get kubectl sha256sum
+      shell: sha256sum /opt/kubectl-{{ kubectl_version }}/kubectl | cut -d " " -f1
+      register: file_shasum
+
+    - name: Get sha256sum value from downloaded file
+      command: cat /opt/kubectl-{{ kubectl_version }}/kubectl.sha256
+      register: downloaded_shasum
+
+    - name: Verify kubectl checksum
+      assert:
+        that:
+          - file_shasum.stdout == downloaded_shasum.stdout
+        fail_msg: "kubectl checksum verification failed"
+        success_msg: "kubectl checksum verified successfully"
+
+    - name: Create symlink to kubectl
+      file:
+        src: "/opt/kubectl-{{ kubectl_version }}/kubectl"
+        dest: "/usr/bin/kubectl"
+        state: link
+
+# Minikube installation for local Kubernetes cluster
+    - name: Install minikube
+      get_url:
+        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+        dest: /usr/local/bin/minikube
+        mode: '0755'
+        timeout: 60
+      retries: 3
+      delay: 10
+
+    - name: Reset ssh connection to allow user changes to affect 'current login user'
+      meta: reset_connection

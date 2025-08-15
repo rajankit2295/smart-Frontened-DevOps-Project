@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: smartassist-ai-app
+  namespace: smart-frontened
+  labels:
+    app: smartassist-ai-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: smartassist-ai-app
+  template:
+    metadata:
+      labels:
+        app: smartassist-ai-app
+    spec:
+      containers:
+      - name: smart-frontened-container
+        image: rajankit6203/smartassist-ai-customer-support:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        # NO restrictive security context - let nginx run as it needs to
+      restartPolicy: Always
