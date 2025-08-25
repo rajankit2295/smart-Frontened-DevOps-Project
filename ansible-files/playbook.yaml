@@ -200,7 +200,7 @@
         dest: "/usr/bin/kubectl"
         state: link
 
-# Minikube installation for local Kubernetes cluster
+# Minikube installation for local Kubernetes cluster   #I did Used Kind Later ... it was more smooth and Easy.
     - name: Install minikube
       get_url:
         url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
