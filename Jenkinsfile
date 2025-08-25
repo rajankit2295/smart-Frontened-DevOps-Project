@@ -17,7 +17,7 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                echo '📥 Cloning SmartAssist AI from GitHub...'
+                echo ' Cloning SmartAssist AI from GitHub...'
                 git url: 'https://github.com/rajnkit2235/Jenkins-CICD-Pipeline-Deployment.git', 
                     branch: 'main'
                 echo '✅ Code checked out successfully!'
@@ -26,7 +26,7 @@ pipeline {
         
         stage('Build') {
             steps {
-                echo '🏗️ Building SmartAssist AI Docker image...'
+                echo ' Building SmartAssist AI Docker image...'
                 sh """
                     docker system prune -af --volumes || true
                     docker build --no-cache -t ${DOCKER_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} .
@@ -37,7 +37,7 @@ pipeline {
         
         stage('Test Cases Execution') {
             steps {
-                echo '🧪 Running tests...'
+                echo ' Running tests...'
                 sh """
                     docker run --rm ${DOCKER_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} echo "✅ Tests passed!"
                 """
@@ -47,7 +47,7 @@ pipeline {
         
         stage('Sonar Analysis') {
             steps {
-                echo '📊 Running code analysis...'
+                echo ' Running code analysis...'
                 // Add SonarQube analysis here if needed
                 sleep 2 // Simulate analysis time
                 echo '✅ Code analysis completed!'
@@ -56,7 +56,7 @@ pipeline {
         
         stage('Archive Artifacts') {
             steps {
-                echo '📦 Archiving artifacts...'
+                echo ' Archiving artifacts...'
                 sh """
                     kind load docker-image ${DOCKER_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} --name dev-cluster
                 """
@@ -66,7 +66,7 @@ pipeline {
         
         stage('Deployment') {
             steps {
-                echo '🚀 Deploying to Kubernetes...'
+                echo ' Deploying to Kubernetes...'
                 withCredentials([file(credentialsId: 'kubeconfig-file', variable: 'KUBECONFIG')]) {
                     sh """
                         cp k8s/deployment.yaml k8s/deployment-local.yaml
@@ -87,23 +87,23 @@ pipeline {
         
         stage('Notification') {
             steps {
-                echo '📧 Sending notifications...'
-                echo '🎉 Pipeline completed successfully!'
-                echo '🌐 App available at: http://13.221.231.200:8080'
-                echo '✅ Notifications sent!'
+                echo ' Sending notifications...'
+                echo ' Pipeline completed successfully!'
+                echo ' App available at: http://13.221.231.200:8080'
+                echo ' Notifications sent!'
             }
         }
     }
     
     post {
         success {
-            echo '🎉 SUCCESS! Pipeline completed successfully!'
+            echo ' SUCCESSSSS! Pipeline completed successfully!'
         }
         failure {
-            echo '❌ FAILURE! Pipeline failed!'
+            echo ' FAILUREE! Pipeline failed!'
         }
         always {
-            echo '🧹 Cleaning up...'
+            echo ' Cleaning up...'
             sh 'docker system prune -f || true'
         }
     }
